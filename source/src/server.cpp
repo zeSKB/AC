@@ -1376,21 +1376,21 @@ void sendvoicecomteam(int sound, int sender)
 
 int numplayers()
 {
-    int count = 1;
 #ifdef STANDALONE
-    count = numclients();
+    return numclients();
 #else
+    if(m_demo) return numclients();
+
+    int count = 1;
+
     if(m_botmode)
     {
         extern vector<botent *> bots;
         loopv(bots) if(bots[i]) count++;
     }
-    if(m_demo)
-    {
-        count = numclients();
-    }
-#endif
+
     return count;
+#endif
 }
 
 int spawntime(int type)
