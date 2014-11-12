@@ -22,17 +22,6 @@ struct serveraction
     virtual ~serveraction() { }
 };
 
-void kick_abuser(int cn, int &cmillis, int &count, int limit)
-{
-    if ( cmillis + 30000 > servmillis ) count++;
-    else {
-        count -= count > 0 ? (servmillis - cmillis)/30000 : 0;
-        if ( count <= 0 ) count = 1;
-    }
-    cmillis = servmillis;
-    if( count >= limit ) disconnect_client(cn, DISC_ABUSE);
-}
-
 struct mapaction : serveraction
 {
     char *map;

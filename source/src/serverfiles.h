@@ -636,60 +636,6 @@ struct servernickblacklist : serverconfigfile
     }
 };
 
-#define FORBIDDENSIZE 15
-struct serverforbiddenlist : serverconfigfile
-{
-    int num;
-    char entries[100][2][FORBIDDENSIZE+1]; // 100 entries and 2 words per entry is more than enough
-
-    void initlist()
-    {
-        num = 0;
-        memset(entries,'\0',2*100*(FORBIDDENSIZE+1));
-    }
-
-    void addentry(char *s)
-    {
-        int len = strlen(s);
-        if ( len > 128 || len < 3 ) return;
-        int n = 0;
-        string s1, s2;
-        char *c1 = s1, *c2 = s2;
-        if (num < 100 && (n = sscanf(s,"%s %s",s1,s2)) > 0 ) // no warnings
-        {
-            strncpy(entries[num][0],c1,FORBIDDENSIZE);
-            if ( n > 1 ) strncpy(entries[num][1],c2,FORBIDDENSIZE);
-            else entries[num][1][0]='\0';
-            num++;
-        }
-    }
-
-    void read()
-    {
-        if(getfilesize(filename) == filelen) return;
-        initlist();
-        if(!load()) return;
-
-        char *l, *p = buf;
-        logline(ACLOG_VERBOSE,"reading forbidden list '%s'", filename);
-        while(p < buf + filelen)
-        {
-            l = p; p += strlen(p) + 1;
-            addentry(l);
-        }
-        DELETEA(buf);
-    }
-
-    bool canspeech(char *s)
-    {
-        for (int i=0; i<num; i++){
-            if ( !findpattern(s,entries[i][0]) ) continue;
-            else if ( entries[i][1][0] == '\0' || findpattern(s,entries[i][1]) ) return false;
-        }
-        return true;
-    }
-};
-
 // serverpwd.cfg
 
 #define ADMINPWD_MAXPAR 1

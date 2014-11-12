@@ -21,7 +21,6 @@ servercommandline scl;
 servermaprot maprot;
 serveripblacklist ipblacklist;
 servernickblacklist nickblacklist;
-serverforbiddenlist forbiddenlist;
 serverpasswords passwords;
 serverinfofile infofiles;
 killmessagesfile killmsgs;
@@ -2835,8 +2834,7 @@ void process(ENetPacket *packet, int sender, int chan)
                 trimtrailingwhitespace(text);
                 if(*text)
                 {
-                    bool canspeech = forbiddenlist.canspeech(text);
-                    if(!spamdetect(cl, text) && canspeech) // team chat
+                    if(!spamdetect(cl, text)) // team chat
                     {
                         logline(ACLOG_INFO, "[%s] %s%s says to team %s: '%s'", cl->hostname, type == SV_TEAMTEXTME ? "(me) " : "", cl->name, team_string(cl->team), text);
                         sendteamtext(text, sender, type);
@@ -2844,17 +2842,12 @@ void process(ENetPacket *packet, int sender, int chan)
                     else
                     {
                         logline(ACLOG_INFO, "[%s] %s%s says to team %s: '%s', %s", cl->hostname, type == SV_TEAMTEXTME ? "(me) " : "",
-                                cl->name, team_string(cl->team), text, canspeech ? "SPAM detected" : "Forbidden speech");
-                        if (canspeech)
-                        {
-                            sendservmsg("\f3Please do not spam; your message was not delivered.", sender);
-                            if ( cl->spamcount > SPAMMAXREPEAT + 2 ) disconnect_client(cl->clientnum, DISC_ABUSE);
-                        }
-                        else
-                        {
-                            sendservmsg("\f3Watch your language! Your message was not delivered.", sender);
-                            kick_abuser(cl->clientnum, cl->badmillis, cl->badspeech, 3);
-                        }
+                                cl->name, team_string(cl->team), text, "SPAM detected");
+
+                        sendservmsg("\f3Please do not spam; your message was not delivered.", sender);
+
+                        if (cl->spamcount > SPAMMAXREPEAT + 2)
+                            disconnect_client(cl->clientnum, DISC_ABUSE);
                     }
                 }
                 break;
@@ -2868,8 +2861,7 @@ void process(ENetPacket *packet, int sender, int chan)
                 trimtrailingwhitespace(text);
                 if(*text)
                 {
-                    bool canspeech = forbiddenlist.canspeech(text);
-                    if(!spamdetect(cl, text) && canspeech)
+                    if(!spamdetect(cl, text))
                     {
                         if(mastermode != MM_MATCH || !matchteamsize || team_isactive(cl->team) || (cl->team == TEAM_SPECT && cl->role == CR_ADMIN)) // common chat
                         {
@@ -2886,17 +2878,12 @@ void process(ENetPacket *packet, int sender, int chan)
                     else
                     {
                         logline(ACLOG_INFO, "[%s] %s%s says: '%s', %s", cl->hostname, type == SV_TEXTME ? "(me) " : "",
-                                cl->name, text, canspeech ? "SPAM detected" : "Forbidden speech");
-                        if (canspeech)
-                        {
-                            sendservmsg("\f3Please do not spam; your message was not delivered.", sender);
-                            if ( cl->spamcount > SPAMMAXREPEAT + 2 ) disconnect_client(cl->clientnum, DISC_ABUSE);
-                        }
-                        else
-                        {
-                            sendservmsg("\f3Watch your language! Your message was not delivered.", sender);
-                            kick_abuser(cl->clientnum, cl->badmillis, cl->badspeech, 3);
-                        }
+                                cl->name, text, "SPAM detected");
+
+                        sendservmsg("\f3Please do not spam; your message was not delivered.", sender);
+
+                        if (cl->spamcount > SPAMMAXREPEAT + 2)
+                            disconnect_client(cl->clientnum, DISC_ABUSE);
                     }
                 }
                 break;
@@ -2914,8 +2901,7 @@ void process(ENetPacket *packet, int sender, int chan)
 
                 if(*text)
                 {
-                    bool canspeech = forbiddenlist.canspeech(text);
-                    if(!spamdetect(cl, text) && canspeech)
+                    if(!spamdetect(cl, text))
                     {
                         bool allowed = !(mastermode == MM_MATCH && cl->team != target->team) && cl->role >= roleconf('t');
                         logline(ACLOG_INFO, "[%s] %s says to %s: '%s' (%s)", cl->hostname, cl->name, target->name, text, allowed ? "allowed":"disallowed");
@@ -2923,17 +2909,12 @@ void process(ENetPacket *packet, int sender, int chan)
                     }
                     else
                     {
-                        logline(ACLOG_INFO, "[%s] %s says to %s: '%s', %s", cl->hostname, cl->name, target->name, text, canspeech ? "SPAM detected" : "Forbidden speech");
-                        if (canspeech)
-                        {
-                            sendservmsg("\f3Please do not spam; your message was not delivered.", sender);
-                            if ( cl->spamcount > SPAMMAXREPEAT + 2 ) disconnect_client(cl->clientnum, DISC_ABUSE);
-                        }
-                        else
-                        {
-                            sendservmsg("\f3Watch your language! Your message was not delivered.", sender);
-                            kick_abuser(cl->clientnum, cl->badmillis, cl->badspeech, 3);
-                        }
+                        logline(ACLOG_INFO, "[%s] %s says to %s: '%s', %s", cl->hostname, cl->name, target->name, text, "SPAM detected");
+
+                        sendservmsg("\f3Please do not spam; your message was not delivered.", sender);
+
+                        if (cl->spamcount > SPAMMAXREPEAT + 2)
+                            disconnect_client(cl->clientnum, DISC_ABUSE);
                     }
                 }
             }
@@ -3721,7 +3702,6 @@ void rereadcfgs(void)
     maprot.read();
     ipblacklist.read();
     nickblacklist.read();
-    forbiddenlist.read();
     passwords.read();
     killmsgs.read();
 }
@@ -4243,7 +4223,6 @@ void initserver(bool dedicated, int argc, char **argv)
         passwords.init(scl.pwdfile, scl.adminpasswd);
         ipblacklist.init(scl.blfile);
         nickblacklist.init(scl.nbfile);
-        forbiddenlist.init(scl.forbidden);
         killmsgs.init(scl.killmessages);
         infofiles.init(scl.infopath, scl.motdpath);
         infofiles.getinfo("en"); // cache 'en' serverinfo
