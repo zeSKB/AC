@@ -2834,20 +2834,28 @@ void process(ENetPacket *packet, int sender, int chan)
                 trimtrailingwhitespace(text);
                 if(*text)
                 {
-                    if(!spamdetect(cl, text)) // team chat
-                    {
-                        logline(ACLOG_INFO, "[%s] %s%s says to team %s: '%s'", cl->hostname, type == SV_TEAMTEXTME ? "(me) " : "", cl->name, team_string(cl->team), text);
-                        sendteamtext(text, sender, type);
-                    }
-                    else
-                    {
-                        logline(ACLOG_INFO, "[%s] %s%s says to team %s: '%s', %s", cl->hostname, type == SV_TEAMTEXTME ? "(me) " : "",
-                                cl->name, team_string(cl->team), text, "SPAM detected");
+                    bool spam = spamdetect(cl, text);
 
-                        sendservmsg("\f3Please do not spam; your message was not delivered.", sender);
+                    logline(ACLOG_INFO,
+                            "[%s] %s%s says to team %s: '%s'%s",
+                            cl->hostname,
+                            type == SV_TEAMTEXTME ? "(me) " : "",
+                            cl->name,
+                            team_string(cl->team),
+                            text,
+                            spam ? ", SPAM detected" : "");
+
+                    if (spam)
+                    {
+                        sendservmsg("\f3Please do not spam; your message was not delivered.",
+                                    sender);
 
                         if (cl->spamcount > SPAMMAXREPEAT + 2)
                             disconnect_client(cl->clientnum, DISC_ABUSE);
+                    }
+                    else
+                    {
+                        sendteamtext(text, sender, type);
                     }
                 }
                 break;
@@ -2901,17 +2909,27 @@ void process(ENetPacket *packet, int sender, int chan)
 
                 if(*text)
                 {
-                    if(!spamdetect(cl, text))
-                    {
-                        bool allowed = !(mastermode == MM_MATCH && cl->team != target->team) && cl->role >= roleconf('t');
-                        logline(ACLOG_INFO, "[%s] %s says to %s: '%s' (%s)", cl->hostname, cl->name, target->name, text, allowed ? "allowed":"disallowed");
-                        if(allowed) sendf(target->clientnum, 1, "riis", SV_TEXTPRIVATE, cl->clientnum, text);
-                    }
-                    else
-                    {
-                        logline(ACLOG_INFO, "[%s] %s says to %s: '%s', %s", cl->hostname, cl->name, target->name, text, "SPAM detected");
+                    bool spam = spamdetect(cl, text);
+                    bool allow = (mastermode == MM_MATCH && cl->team != target->team)
+                        && cl->role >= roleconf('t');
 
-                        sendservmsg("\f3Please do not spam; your message was not delivered.", sender);
+                    logline(ACLOG_INFO,
+                            "[%s] %s says to %s: '%s' (%s)",
+                            cl->hostname,
+                            cl->name,
+                            target->name,
+                            text,
+                            allow ? "allowed" : (spam ?
+                                                "SPAM detected" : "disallowed"));
+
+                    if (allow)
+                    {
+                        sendf(target->clientnum, 1, "riis", SV_TEXTPRIVATE, cl->clientnum, text);
+                    }
+                    else if (spam)
+                    {
+                        sendservmsg("\f3Please do not spam; your message was not delivered.",
+                                    sender);
 
                         if (cl->spamcount > SPAMMAXREPEAT + 2)
                             disconnect_client(cl->clientnum, DISC_ABUSE);
