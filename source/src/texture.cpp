@@ -149,13 +149,19 @@ void createtexture(int tnum, int w, int h, void *pixels, int clamp, bool mipmap,
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp&1 ? GL_CLAMP_TO_EDGE : GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clamp&2 ? GL_CLAMP_TO_EDGE : GL_REPEAT);
     if(hasAF && min(aniso, hwmaxaniso) > 0 && mipmap) glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, min(aniso, hwmaxaniso));
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, bilinear ? GL_LINEAR : GL_NEAREST);
+
+    /* Render texreduced textures using nearest neighbour so that textures do
+     * not show up blurred.
+     */
+    bool interpolate = !(texreduce > 0 && canreduce) && bilinear;
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, interpolate ? GL_LINEAR : GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
         mipmap ?
             (trilinear ?
-                (bilinear ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_LINEAR) :
-                (bilinear ? GL_LINEAR_MIPMAP_NEAREST : GL_NEAREST_MIPMAP_NEAREST)) :
-            (bilinear ? GL_LINEAR : GL_NEAREST));
+                (interpolate ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_LINEAR) :
+                (interpolate ? GL_LINEAR_MIPMAP_NEAREST : GL_NEAREST_MIPMAP_NEAREST)) :
+            (interpolate ? GL_LINEAR : GL_NEAREST));
 
     int tw = w, th = h;
     if(pixels) resizetexture(w, h, mipmap, canreduce, GL_TEXTURE_2D, tw, th);
