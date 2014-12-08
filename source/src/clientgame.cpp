@@ -984,7 +984,7 @@ void timeupdate(int milliscur, int millismax)
             hudoutf("%s1 minute left!", sec==60 ? "" : "less than ");
             exechook(HOOK_SP_MP, "onLastMin", "");
         }
-        else if(!clockdisplay) conoutf("time remaining: %d minutes", minutesremaining);
+        else if(clockdisplay==0) conoutf("time remaining: %d minutes", minutesremaining);
         else clientlogf("time remaining: %d minutes", minutesremaining);
     }
 }
